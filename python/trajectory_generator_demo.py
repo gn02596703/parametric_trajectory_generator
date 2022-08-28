@@ -43,7 +43,7 @@ class TrajectoryGenerator():
         self.handler = self.lib.trajectory_generator_new()
         
         self.path = WayPoint()
-        self.path_size = None
+        self.path_size = 0
     
     def plan(self, initial_state, target_state):
         self.lib.plan(self.handler, initial_state, target_state)
@@ -55,6 +55,7 @@ class TrajectoryGenerator():
     
     def free_path(self):
         self.lib.free_path(self.path)
+        self.path_size = 0
 
 
 
@@ -70,54 +71,36 @@ if __name__ == "__main__":
     initial_state.kappa = 0.0
 
     target_state = VehicleState()
-    target_state.x = 10.0
-    target_state.y = 5.0
+    target_state.x = 30.0
+    target_state.y = 0.0
     target_state.theta = 0.0
     target_state.kappa = 0.0   
 
-    trajectory_generator.plan(initial_state, target_state)
-    trajectory_generator.get_path()
-
+    waypoint_array = []
     waypoint_list = []
-    for i in range(0, trajectory_generator.path_size):
-        waypoint_list.append(
-            copy.deepcopy(
-                [trajectory_generator.path[i].x ,trajectory_generator.path[i].y]
+
+    vertical_sample_resolution = 2
+    original_target_y = target_state.y
+    
+    for sample in range(-5,5): 
+
+        target_state.y = original_target_y + sample*vertical_sample_resolution
+        if(trajectory_generator.path_size > 0):
+            trajectory_generator.free_path()
+        trajectory_generator.plan(initial_state, target_state)
+        trajectory_generator.get_path()
+
+        for i in range(0, trajectory_generator.path_size):
+            waypoint_list.append(
+                copy.deepcopy(
+                    [trajectory_generator.path[i].x ,trajectory_generator.path[i].y]
+                )
             )
-        )
-    waypoint_array = np.asarray(waypoint_list)
 
-    target_state.x = 20.0
-    target_state.y = 0.0
-    target_state.theta = 45.0*np.pi/180.0
-    # To-be checked
-    # Do we need to free the pointer memory created by ctypes??
-    pdb.set_trace()
-    trajectory_generator.free_path()
-    trajectory_generator.plan(initial_state, target_state)
-    trajectory_generator.get_path()
+        waypoint_array.append(np.asarray(waypoint_list))
 
-    waypoint_list_2 = []
-    for i in range(0, trajectory_generator.path_size):
-        waypoint_list_2.append(
-            copy.deepcopy(
-                [trajectory_generator.path[i].x ,trajectory_generator.path[i].y]
-            )
-        )
-    waypoint_array_2 = np.asarray(waypoint_list_2)
-
-    plt.plot(waypoint_array[:,0], waypoint_array[:,1],'o')
-    plt.plot(waypoint_array_2[:,0], waypoint_array_2[:,1],'o')
+    for i in range(0, len(waypoint_array)):
+        plt.plot(waypoint_array[i][:,0], waypoint_array[i][:,1],'o')
     plt.show()
 
-    """
-    trajectory_generator.handler = lib.trajectory_generator_new()
-    pdb.set_trace()
-    lib.plan(trajectory_generator.handler, initial_state, target_state)
-    path_size = lib.get_path_size(trajectory_generator.handler)
-    
-    path = (WayPoint*path_size)()
-    lib.get_path(trajectory_generator.handler, path)
-    """
-
-    pdb.set_trace()
+    # pdb.set_trace()
